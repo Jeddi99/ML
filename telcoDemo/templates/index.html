@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ทำนายการยกเลิกบริการลูกค้า - Telco Churn Prediction</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+         color: #f8fafc; min-height: 100vh; padding: 24px; }
+  .card { background: rgba(30,41,59,.85); backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,.1); border-radius: 20px;
+          padding: 36px; max-width: 880px; margin: 0 auto;
+          box-shadow: 0 25px 50px -12px rgba(0,0,0,.5); }
+  .header { text-align: center; margin-bottom: 28px; }
+  .header h1 { font-size: 26px; font-weight: 700;
+               background: linear-gradient(90deg,#38bdf8,#818cf8);
+               -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+               margin-bottom: 8px; }
+  .header p { color: #94a3b8; font-size: 14px; }
+  .badge { display: inline-block; background: rgba(56,189,248,.15); color: #38bdf8;
+           padding: 4px 12px; border-radius: 999px; font-size: 12px;
+           margin-bottom: 12px; font-weight: 600; }
+  .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+                   color: #64748b; font-weight: 700; margin: 24px 0 12px; }
+  .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 13px; color: #cbd5e1; font-weight: 500; }
+  .form-group input, .form-group select {
+      background: rgba(15,23,42,.7); border: 1px solid #334155; color: #fff;
+      border-radius: 10px; padding: 11px 13px; font-size: 14px; outline: none;
+      transition: border-color .2s; width: 100%; }
+  .form-group input:focus, .form-group select:focus {
+      border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,.2); }
+  .btn-submit { width: 100%; margin-top: 26px;
+      background: linear-gradient(90deg,#0ea5e9,#6366f1); color: #fff; border: none;
+      border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 600;
+      cursor: pointer; transition: opacity .2s, transform .1s; }
+  .btn-submit:hover { opacity: .95; transform: translateY(-1px); }
+  .result-box { margin-top: 26px; padding: 22px; border-radius: 14px; text-align: center; }
+  .result-box .pct { font-size: 46px; font-weight: 800; line-height: 1.1; }
+  .result-box .lvl { font-size: 17px; font-weight: 700; margin-top: 6px; }
+  .result-box .act { font-size: 14px; margin-top: 10px; opacity: .85; }
+  .danger { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.45); color: #f87171; }
+  .warn   { background: rgba(249,115,22,.15); border: 1px solid rgba(249,115,22,.45); color: #fb923c; }
+  .watch  { background: rgba(234,179,8,.15); border: 1px solid rgba(234,179,8,.45); color: #facc15; }
+  .safe   { background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.45); color: #34d399; }
+  .error  { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.4);
+            color: #f87171; margin-top: 20px; padding: 14px; border-radius: 12px;
+            text-align: center; font-size: 14px; }
+  .bar { height: 10px; border-radius: 999px; background: rgba(148,163,184,.25);
+         margin-top: 16px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: 999px;
+                background: currentColor; }
+  .presets { margin-top: 18px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .btn-preset { background: #334155; color: #cbd5e1; border: none; padding: 7px 13px;
+                border-radius: 8px; font-size: 12px; cursor: pointer; }
+  .btn-preset:hover { background: #475569; color: #fff; }
+  .footer { margin-top: 26px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.08);
+            color: #64748b; font-size: 12px; text-align: center; line-height: 1.8; }
+  @media (max-width: 720px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } .card { padding: 22px; } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <span class="badge">Flask + Scikit-Learn Pipeline</span>
+    <h1>ทำนายโอกาสยกเลิกบริการของลูกค้า</h1>
+    <p>กรอกข้อมูลลูกค้า เพื่อให้โมเดลประเมินความเสี่ยงที่ลูกค้าจะเลิกใช้บริการ</p>
+  </div>
+
+  <form action="/predict" method="POST">
+    <div class="section-title">ข้อมูลส่วนตัว</div>
+    <div class="form-grid">
+      {% for col in ['gender','SeniorCitizen','Partner','Dependents'] %}
+      <div class="form-group">
+        <label for="{{ col }}">{{ labels[col] }}</label>
+        <select name="{{ col }}" id="{{ col }}">
+          {% for val, text in choices[col] %}
+          <option value="{{ val }}" {% if values.get(col)==val %}selected{% endif %}>{{ text }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="section-title">สัญญาและค่าใช้จ่าย</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="tenure">{{ labels['tenure'] }}</label>
+        <input type="number" step="1" min="0" name="tenure" id="tenure" value="{{ values.get('tenure','5') }}" required>
+      </div>
+      <div class="form-group">
+        <label for="MonthlyCharges">{{ labels['MonthlyCharges'] }}</label>
+        <input type="number" step="0.05" min="0" name="MonthlyCharges" id="MonthlyCharges" value="{{ values.get('MonthlyCharges','79.5') }}" required>
+      </div>
+      <div class="form-group">
+        <label for="TotalCharges">{{ labels['TotalCharges'] }}</label>
+        <input type="number" step="0.05" min="0" name="TotalCharges" id="TotalCharges" value="{{ values.get('TotalCharges','400.0') }}" required>
+      </div>
+      {% for col in ['Contract','PaperlessBilling','PaymentMethod'] %}
+      <div class="form-group">
+        <label for="{{ col }}">{{ labels[col] }}</label>
+        <select name="{{ col }}" id="{{ col }}">
+          {% for val, text in choices[col] %}
+          <option value="{{ val }}" {% if values.get(col)==val %}selected{% endif %}>{{ text }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="section-title">บริการที่ใช้อยู่</div>
+    <div class="form-grid">
+      {% for col in ['PhoneService','MultipleLines','InternetService','OnlineSecurity','OnlineBackup','DeviceProtection','TechSupport','StreamingTV','StreamingMovies'] %}
+      <div class="form-group">
+        <label for="{{ col }}">{{ labels[col] }}</label>
+        <select name="{{ col }}" id="{{ col }}">
+          {% for val, text in choices[col] %}
+          <option value="{{ val }}" {% if values.get(col)==val %}selected{% endif %}>{{ text }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button type="submit" class="btn-submit">ทำนายความเสี่ยง</button>
+  </form>
+
+  <div class="presets">
+    <button type="button" class="btn-preset" onclick="preset('high')">ตัวอย่างลูกค้าเสี่ยงสูง</button>
+    <button type="button" class="btn-preset" onclick="preset('low')">ตัวอย่างลูกค้าเสี่ยงต่ำ</button>
+  </div>
+
+  {% if probability is defined and probability is not none %}
+  <div class="result-box {{ tone }}">
+    <div class="pct">{{ probability }}%</div>
+    <div class="lvl">ความเสี่ยงระดับ{{ level }}</div>
+    <div class="bar"><span style="width: {{ probability }}%"></span></div>
+    <div class="act">คำแนะนำ: {{ action }}</div>
+  </div>
+  {% endif %}
+
+  {% if error_text %}
+  <div class="error">เกิดข้อผิดพลาด: {{ error_text }}</div>
+  {% endif %}
+
+  <div class="footer">
+    โมเดลที่ใช้งาน: {{ info.best_model }} &middot;
+    ROC-AUC {{ info.scoreboard[0]['ROC-AUC'] }} &middot;
+    เทรนด้วยข้อมูล {{ info.train_rows }} แถว ทดสอบ {{ info.test_rows }} แถว<br>
+    ชุดข้อมูล Telco Customer Churn จาก Kaggle &middot; อัตราการยกเลิกจริงในข้อมูล {{ info.churn_rate }}%
+  </div>
+</div>
+
+<script>
+const PRESETS = {
+  high: { tenure: 2, MonthlyCharges: 95.5, TotalCharges: 190,
+          Contract: 'Month-to-month', PaymentMethod: 'Electronic check',
+          InternetService: 'Fiber optic', TechSupport: 'No', OnlineSecurity: 'No',
+          PaperlessBilling: 'Yes', SeniorCitizen: '1', Partner: 'No', Dependents: 'No' },
+  low:  { tenure: 65, MonthlyCharges: 60.0, TotalCharges: 3900,
+          Contract: 'Two year', PaymentMethod: 'Credit card (automatic)',
+          InternetService: 'DSL', TechSupport: 'Yes', OnlineSecurity: 'Yes',
+          PaperlessBilling: 'No', SeniorCitizen: '0', Partner: 'Yes', Dependents: 'Yes' }
+};
+function preset(kind) {
+  const data = PRESETS[kind];
+  for (const [key, val] of Object.entries(data)) {
+    const el = document.getElementById(key);
+    if (el) el.value = val;
+  }
+}
+</script>
+</body>
+</html>

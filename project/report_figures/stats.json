@@ -1,0 +1,31 @@
+{
+ "TN": 749,
+ "FP": 286,
+ "FN": 81,
+ "TP": 293,
+ "precision": 0.506,
+ "recall": 0.7834,
+ "accuracy": 0.7395,
+ "roc": {
+  "Logistic Regression": 0.8455,
+  "Decision Tree": 0.827,
+  "Random Forest": 0.8429
+ },
+ "churn_by_contract": {
+  "Month-to-month": 42.7,
+  "One year": 11.3,
+  "Two year": 2.8
+ },
+ "churn_by_internet": {
+  "DSL": 19.0,
+  "Fiber optic": 41.9,
+  "No": 7.4
+ },
+ "churn_by_tenure": {
+  "0-6": 52.9,
+  "7-12": 35.9,
+  "13-24": 28.7,
+  "25-48": 20.4,
+  "49+": 9.5
+ }
+}

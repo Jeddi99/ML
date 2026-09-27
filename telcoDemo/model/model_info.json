@@ -1,0 +1,20 @@
+{
+  "best_model": "Logistic Regression",
+  "scoreboard": [
+    {
+      "Model": "Logistic Regression",
+      "ROC-AUC": 0.8455,
+      "PR-AUC": 0.6587,
+      "F1 (Churn)": 0.6149
+    },
+    {
+      "Model": "Random Forest",
+      "ROC-AUC": 0.8434,
+      "PR-AUC": 0.6598,
+      "F1 (Churn)": 0.6288
+    }
+  ],
+  "train_rows": 5634,
+  "test_rows": 1409,
+  "churn_rate": 26.54
+}

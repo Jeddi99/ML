@@ -1,0 +1,8 @@
+# Core Data Science & Machine Learning Libraries
+pandas
+numpy
+scikit-learn
+kagglehub
+
+# Jupyter Notebook Kernel Support
+ipykernel
